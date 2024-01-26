@@ -4,9 +4,28 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link href="./src/style.css" rel="stylesheet" />
     <title>Vite App</title>
   </head>
   <body>
+    <form id="postForm" onsubmit="createBlog()">
+      <label for="title">Title:</label>
+      <input type="text" id="title" /><br />
+
+      <label for="article">Article:</label>
+      <textarea id="article" rows="3"></textarea><br />
+
+      <button class="c-text" type="submit">Submit</button>
+    </form>
+    <form
+      id="form"
+      enctype="multipart/form-data"
+      action="http://localhost:8000/upload"
+      method="POST"
+    >
+      <input class="input file-input" type="file" name="file" multiple />
+      <button class="button" type="submit">Submit</button>
+    </form>
     <div id="blogsContainer" class="space-y-4"></div>
 
     <script>
@@ -14,18 +33,22 @@
         fetch("http://localhost:8000/")
           .then((response) => response.json())
           .then((data) => {
-            console.log(data);
-            if (data) {
-              data.forEach((blog) => {
-                document.getElementById("blogsContainer").innerHTML += `
-            			<div class="c-border rounded-xl p-4" id="${blog.ID}">
-            				<a href="/blog/${blog.ID}">
-                  		<h2>${blog.Title}</h2>
-                    		<p>${blog.Content}</p>
-                  	</a>
-            				<button class="c-text" type="submit" onclick="deleteBlog(${blog.ID})">Delete</button>
-            			</div>`;
-              });
+            console.table(data);
+            const blogsContainer = document.getElementById("blogsContainer");
+            if (data && blogsContainer) {
+              blogsContainer.innerHTML = data
+                .map(
+                  (blog) => `
+									<div class="c-border rounded-xl p-4" id="${blog.id}">
+      							<a href="/blog/${blog.id}">
+                     	<h2>${blog.title}</h2>
+                     	<p>${blog.article}</p>
+                   	</a>
+										<button class="c-text" type="submit" onclick="deleteBlog(${blog.id})">Delete</button>
+         					</div>
+                 `,
+                )
+                .join("");
             }
           })
           .catch((error) => {
@@ -33,6 +56,47 @@
           });
       }
       getBlogs();
+      async function createBlog() {
+        event.preventDefault();
+        var title = document.getElementById("title").value;
+        var article = document.getElementById("article").value;
+
+        try {
+          const response = await fetch("http://localhost:8000/createBlog/", {
+            method: "POST",
+            // headers: {
+            //   "Content-Type": "application/json",
+            // },
+            body: JSON.stringify({
+              title: title,
+              article: article,
+            }),
+          });
+
+          if (response.ok) {
+            const responseData = await response.json();
+            console.log("Blog post created successfully!", responseData);
+            const blogPostContainer = document.getElementById("blogsContainer");
+            const blogPostElement = document.createElement("div");
+            blogPostElement.innerHTML = `
+									<div class="border rounded-xl border-gray-300 p-4">
+      							<a href="/blog/${responseData.id}">
+                     	<h2>${responseData.title}</h2>
+                     	<p>${responseData.article}</p>
+                   	</a>
+										<button id="delete" type="submit" onclick="deleteBlog(${responseData.id})">Delete</button>
+         					</div>
+									`;
+            blogPostContainer.appendChild(blogPostElement);
+            document.getElementById("postForm").reset();
+            // getBlogs();
+          } else {
+            console.error("Blog post creation failed.");
+          }
+        } catch (error) {
+          console.error("Error:", error);
+        }
+      }
     </script>
   </body>
 </html>
